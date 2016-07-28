@@ -1,0 +1,3 @@
+[submodule "src/main/resources/commonjs"]
+	path = src/main/resources/commonjs
+	url = https://github.com/nukkitjs/jvm-npm.git

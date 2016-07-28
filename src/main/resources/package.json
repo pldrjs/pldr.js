@@ -1,0 +1,29 @@
+{
+  "name": "nukkitjs",
+  "version": "1.0.0",
+  "description": "A plugin which enables javascript plugin in nukkit.",
+  "main": "nukkit.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nukkitjs/nukkit.js.git"
+  },
+  "keywords": [
+    "Nukkit",
+    "Nashorn"
+  ],
+  "author": [
+    "HelloWorld017 <deu07115@gmail.com>",
+    "onebone <jyc00417@gmail.com>"
+  ],
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/nukkitjs/nukkit.js/issues"
+  },
+  "homepage": "https://github.com/nukkitjs/nukkit.js#readme",
+  "dependencies": {
+    "events": "^1.1.1"
+  }
+}

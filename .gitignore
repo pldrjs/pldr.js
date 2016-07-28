@@ -1,3 +1,4 @@
 /bin/
 /target/
 /src/main/resources/node_modules/
+.settings/

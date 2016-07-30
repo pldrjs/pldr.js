@@ -27,6 +27,14 @@ public class PldrJS extends PluginBase{
 	public static PldrJS getInstance(){
 		return instance;
 	}
+	
+	public boolean exportResource(String resourceName, File target) throws Exception{
+		if(!target.exists()){
+			Files.copy(this.getClass().getClassLoader().getResourceAsStream(resourceName), target.toPath());
+			return true;
+		}
+		return false;
+	}
 
 	@Override
 	public void onEnable(){
@@ -38,10 +46,10 @@ public class PldrJS extends PluginBase{
 		}
 
 		try{
-			this.saveResource("pldr.js", new File(baseFolder, "pldr.js").getAbsolutePath(), false);
-			this.saveResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js").getAbsolutePath(), false);
-			this.saveResource("package.json", new File(baseFolder, "package.json").getAbsolutePath(), false);
-
+			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
+			exportResource("pldr.js", new File(baseFolder, "pldr.js"));
+			exportResource("package.json", new File(baseFolder, "package.json"));
+			
 			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
 			ZipInputStream zis = new ZipInputStream(defaultModules);
 			ZipEntry entry;

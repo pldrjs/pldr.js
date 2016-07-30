@@ -24,14 +24,6 @@ public class PldrJS extends PluginBase{
 	public String[] ignorantFiles = {"jvm-npm.js"};
 	private static PldrJS instance = null;
 
-	public boolean exportResource(String resourceName, File target) throws Exception{
-		if(!target.exists()){
-			Files.copy(this.getClass().getClassLoader().getResourceAsStream(resourceName), target.toPath());
-			return true;
-		}
-		return false;
-	}
-
 	public static PldrJS getInstance(){
 		return instance;
 	}
@@ -46,9 +38,9 @@ public class PldrJS extends PluginBase{
 		}
 
 		try{
-			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
-			exportResource("pldr.js", new File(baseFolder, "pldr.js"));
-			exportResource("package.json", new File(baseFolder, "package.json"));
+			this.saveResource("pldr.js", new File(baseFolder, "pldr.js").getAbsolutePath(), false);
+			this.saveResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js").getAbsolutePath(), false);
+			this.saveResource("package.json", new File(baseFolder, "package.json").getAbsolutePath(), false);
 
 			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
 			ZipInputStream zis = new ZipInputStream(defaultModules);
@@ -76,12 +68,10 @@ public class PldrJS extends PluginBase{
 
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
 			try{
-				String[] split = f.getName().split("\\.");
-				if(!(f.isFile() && split[split.length - 1].equals("js"))){
+				if(!(f.isFile() && f.getName().endsWith(".js"))
+					|| Arrays.asList(ignorantFiles).contains(f.getName())){
 					return;
 				}
-
-				if(Arrays.asList(ignorantFiles).contains(f.getName())) return;
 
 				ScriptContext ctx = new SimpleScriptContext();
 				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());

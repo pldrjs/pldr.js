@@ -1,36 +1,6 @@
-var PldrJS = {};
-var $ = new JavaImporter(java.io, java.lang);
-
-PldrJS.getPlugin = function(){
-	return PldrJSPlugin;
-};
-
-PldrJS.print = function(str){
-	PldrJS.getPlugin().getLogger().info(str);
-};
-
-var knownEvents = [];
-var eventCategories = [];
-var resources = PldrJSPlugin.class.getClassLoader().getResources('cn/nukkit/event/');
-
-while(resources.hasMoreElements()){
-	var elem = new $.File(resoures.nextElement().getFile());
-	if(elem.isDirectory()) eventCategories.push(elem);
-}
-
-eventCategories.forEach((v) => {
-	var files = v.listFiles();
-	files.forEach((f) => {
-		if(f.isFile() && f.getName().endsWith(".class")){
-			if(f.getName() === v.getName().charAt(0).toUpperCase() + v.getName().slice(1) + "Event") return;
-
-			var className = f.getName().substring(0, f.getName().length() - 6);
-			var eventName = className.replace("Event", "");
-			eventName = eventName.charAt(0).toLowerCase() + eventName.slice(1);
-
-			knownEvents[eventName] = $.Class.forName('cn.nukkit.event.' + v.getName() + '.' + className);
-		}
-	});
-});
-
-module.exports = PldrJS;
+/*!
+ * pldr.js 1.0.0 by HelloWorld017 <deu07115@gmail.com>,onebone <jyc00417@gmail.com>
+ * Copyright 2015-2016 HelloWorld017 <deu07115@gmail.com>,onebone <jyc00417@gmail.com>
+ * Licensed under the GPL-3.0 license
+ */
+"use strict";var PldrJS={},$=new JavaImporter(java.io,java.lang);PldrJS.getPlugin=function(){return PldrJSPlugin},PldrJS.print=function(a){PldrJS.getPlugin().getLogger().info(a)};for(var knownEvents={},eventCategories=[],resources=PldrJSPlugin["class"].getClassLoader().getResources("cn/nukkit/event/");resources.hasMoreElements();){var elem=new $.File(resoures.nextElement().getFile());elem.isDirectory()&&eventCategories.push(elem)}eventCategories.forEach(function(a){var b=a.listFiles();b.forEach(function(b){if(b.isFile()&&b.getName().endsWith(".class")){if(b.getName()===a.getName().charAt(0).toUpperCase()+a.getName().slice(1)+"Event")return;var c=b.getName().substring(0,b.getName().length()-6),d=c.replace("Event","");d=d.charAt(0).toLowerCase()+d.slice(1),knownEvents[d]=$.Class.forName("cn.nukkit.event."+a.getName()+"."+c)}})}),$.System.out.println(JSON.stringify(knownEvents)),module.exports=PldrJS;

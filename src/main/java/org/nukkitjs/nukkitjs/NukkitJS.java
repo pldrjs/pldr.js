@@ -4,42 +4,93 @@ import cn.nukkit.plugin.PluginBase;
 
 import java.io.File;
 import java.io.FileReader;
-import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import javax.script.Compilable;
 import javax.script.CompiledScript;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import javax.script.SimpleScriptContext;
 
 public class NukkitJS extends PluginBase{
+	public File baseFolder = new File("scripts/");
+	public File modulesFolder = new File(baseFolder, "node_modules");
+	public CompiledScript commonjs;
+	public String[] ignorantFiles = {"jvm-npm.js"};
+	private static NukkitJS instance = null;
+	
+	public boolean exportResource(String resourceName, File target) throws Exception{
+		if(!target.exists()){
+			Files.copy(this.getClass().getClassLoader().getResourceAsStream(resourceName), target.toPath());
+			return true;
+		}
+		return false;
+	}
+	
+	public static NukkitJS getInstance(){
+		return instance;
+	}
+	
 	@Override
 	public void onEnable(){
+		instance = this;
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
-		CompiledScript nukkitjs;
+		
+		if(!baseFolder.exists()){
+			baseFolder.mkdir();
+		}
+		
 		try{
-			nukkitjs = ((Compilable) engine).compile(
-				new InputStreamReader(
-					this.getClass().getClassLoader().getResourceAsStream("nukkit.js")
-				)
-			);
-		}catch(ScriptException e){
+			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
+			exportResource("nukkit.js", new File(baseFolder, "nukkit.js"));
+			exportResource("package.json", new File(baseFolder, "package.json"));
+			
+			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
+			ZipInputStream zis = new ZipInputStream(defaultModules);
+			ZipEntry entry;
+			while((entry = zis.getNextEntry()) != null){
+				File target = new File(modulesFolder, entry.getName());
+				if(target.exists()) continue;
+				if(entry.isDirectory()){
+					target.mkdir();
+				}else{
+					Files.copy(zis, target.toPath());
+				}
+				zis.closeEntry();
+			}
+		}catch(Exception e){
 			e.printStackTrace();
 			return;
 		}
 		
-		if(!new File(this.getDataFolder(), "commonjs").exists()){
-			
+		try{
+			commonjs = ((Compilable) engine).compile(new FileReader(new File(baseFolder, "jvm-npm.js")));
+		}catch(Exception e){
+			e.printStackTrace();
 		}
 		
-		Arrays.asList((new File("plugins/")).listFiles()).forEach((f) -> {
+		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
 			try{
+				String[] split = f.getName().split("\\.");
+				if(!(f.isFile() && split[split.length - 1].equals("js"))){
+					return;
+				}
+				
+				if(Arrays.asList(ignorantFiles).contains(f.getName())) return;
+				
 				ScriptContext ctx = new SimpleScriptContext();
+				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("NukkitJSPlugin", NukkitJS.getInstance());
+				
 				CompiledScript sc = ((Compilable) engine).compile(new FileReader(f));
-				nukkitjs.eval(ctx);
+				commonjs.eval(ctx);
+				//ECMAScript6 not working!
+				//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
+				engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
 				sc.eval(ctx);
 			}catch(Exception e){
 				e.printStackTrace();

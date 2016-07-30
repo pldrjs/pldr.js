@@ -1,5 +1,5 @@
 var PldrJS = {};
-var $ = new JavaImporter(java.io, java.lang);
+var $ = new JavaImporter(java.io, java.lang, Packages.cn.nukkit);
 
 PldrJS.getPlugin = function(){
 	return PldrJSPlugin;
@@ -11,12 +11,12 @@ PldrJS.print = function(str){
 
 var knownEvents = {};
 var eventCategories = [];
-var resources = PldrJSPlugin.class.getClassLoader().getResources('cn/nukkit/event/');
+var resources = new $.File($.Server.class.getClassLoader().getResources('cn/nukkit/event/').nextElement().getFile());
 
-while(resources.hasMoreElements()){
-	var elem = new $.File(resoures.nextElement().getFile());
-	if(elem.isDirectory()) eventCategories.push(elem);
-}
+resources.listFiles((dir) => {
+	if(!dir.isDirectory()) return;
+	eventCategories.push(dir);
+});
 
 eventCategories.forEach((v) => {
 	var files = v.listFiles();
@@ -32,5 +32,7 @@ eventCategories.forEach((v) => {
 		}
 	});
 });
+
+PldrJS.print(JSON.stringify(eventCategories));
 
 module.exports = PldrJS;

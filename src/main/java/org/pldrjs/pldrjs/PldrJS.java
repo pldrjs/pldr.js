@@ -21,7 +21,7 @@ public class PldrJS extends PluginBase{
 	public File baseFolder = new File("scripts/");
 	public File modulesFolder = new File(baseFolder, "node_modules");
 	public CompiledScript commonjs;
-	public String[] ignorantFiles = {"jvm-npm.js"};
+	public String[] ignorantFiles = {"jvm-npm.js", "pldr.js"};
 	private static PldrJS instance = null;
 
 	public boolean exportResource(String resourceName, File target) throws Exception{

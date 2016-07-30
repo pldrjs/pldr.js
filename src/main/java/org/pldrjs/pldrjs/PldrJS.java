@@ -1,4 +1,4 @@
-package org.nukkitjs.nukkitjs;
+package org.pldrjs.pldrjs;
 
 import cn.nukkit.plugin.PluginBase;
 
@@ -17,13 +17,13 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.SimpleScriptContext;
 
-public class NukkitJS extends PluginBase{
+public class PldrJS extends PluginBase{
 	public File baseFolder = new File("scripts/");
 	public File modulesFolder = new File(baseFolder, "node_modules");
 	public CompiledScript commonjs;
 	public String[] ignorantFiles = {"jvm-npm.js"};
-	private static NukkitJS instance = null;
-	
+	private static PldrJS instance = null;
+
 	public boolean exportResource(String resourceName, File target) throws Exception{
 		if(!target.exists()){
 			Files.copy(this.getClass().getClassLoader().getResourceAsStream(resourceName), target.toPath());
@@ -31,25 +31,25 @@ public class NukkitJS extends PluginBase{
 		}
 		return false;
 	}
-	
-	public static NukkitJS getInstance(){
+
+	public static PldrJS getInstance(){
 		return instance;
 	}
-	
+
 	@Override
 	public void onEnable(){
 		instance = this;
 		ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
-		
+
 		if(!baseFolder.exists()){
 			baseFolder.mkdir();
 		}
-		
+
 		try{
 			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
-			exportResource("nukkit.js", new File(baseFolder, "nukkit.js"));
+			exportResource("pldr.js", new File(baseFolder, "pldr.js"));
 			exportResource("package.json", new File(baseFolder, "package.json"));
-			
+
 			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
 			ZipInputStream zis = new ZipInputStream(defaultModules);
 			ZipEntry entry;
@@ -67,25 +67,25 @@ public class NukkitJS extends PluginBase{
 			e.printStackTrace();
 			return;
 		}
-		
+
 		try{
 			commonjs = ((Compilable) engine).compile(new FileReader(new File(baseFolder, "jvm-npm.js")));
 		}catch(Exception e){
 			e.printStackTrace();
 		}
-		
+
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
 			try{
 				String[] split = f.getName().split("\\.");
 				if(!(f.isFile() && split[split.length - 1].equals("js"))){
 					return;
 				}
-				
+
 				if(Arrays.asList(ignorantFiles).contains(f.getName())) return;
-				
+
 				ScriptContext ctx = new SimpleScriptContext();
-				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("NukkitJSPlugin", NukkitJS.getInstance());
-				
+				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
+
 				CompiledScript sc = ((Compilable) engine).compile(new FileReader(f));
 				commonjs.eval(ctx);
 				//ECMAScript6 not working!

@@ -1,6 +1,6 @@
-name: "nukklt.js"
-author: "nukkitjs"
+name: "pldr.js"
+author: "pldrjs"
 version: "erita [1.0]"
 description: "A plugin which enables javascript plugin in nukkit."
-main: org.nukkitjs.nukkitjs.NukkitJS
+main: org.pldrjs.pldrjs.PldrJS
 api: [1.0.0]

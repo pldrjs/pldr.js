@@ -1,14 +1,14 @@
 {
-  "name": "nukkitjs",
+  "name": "pldrjs",
   "version": "1.0.0",
   "description": "A plugin which enables javascript plugin in nukkit.",
-  "main": "nukkit.js",
+  "main": "pldr.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nukkitjs/nukkit.js.git"
+    "url": "git+https://github.com/pldrjs/pldr.js.git"
   },
   "keywords": [
     "Nukkit",
@@ -20,9 +20,9 @@
   ],
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/nukkitjs/nukkit.js/issues"
+    "url": "https://github.com/pldrjs/pldr.js/issues"
   },
-  "homepage": "https://github.com/nukkitjs/nukkit.js#readme",
+  "homepage": "https://github.com/pldrjs/pldr.js#readme",
   "dependencies": {
     "events": "^1.1.1"
   }

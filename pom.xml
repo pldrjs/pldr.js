@@ -2,11 +2,11 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.nukkitjs</groupId>
-  <artifactId>nukkitjs</artifactId>
+  <groupId>org.pldrjs</groupId>
+  <artifactId>pldrjs</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
-  
+
   <repositories>
   	<repository>
   		<id>mengcraft</id>
@@ -14,8 +14,8 @@
   	</repository>
   </repositories>
 
-  <name>nukkit.js</name>
-  <url>https://github.com/nukkitjs/nukkit.js/</url>
+  <name>pldr.js</name>
+  <url>https://github.com/pldrjs/pldr.js/</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -29,7 +29,7 @@
 		<scope>provided</scope>
     </dependency>
   </dependencies>
-  
+
   <build>
 	<finalName>${project.artifactId}-${project.version}</finalName>
 	<defaultGoal>clean install</defaultGoal>

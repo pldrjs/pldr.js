@@ -3,3 +3,5 @@
 /src/main/resources/node_modules/
 /src/main/resources/default_modules.zip
 .settings/
+.classpath
+.project

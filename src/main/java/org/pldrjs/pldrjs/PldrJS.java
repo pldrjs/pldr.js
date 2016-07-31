@@ -18,6 +18,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.jar.JarEntry;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -33,12 +35,14 @@ public class PldrJS extends PluginBase{
 	public File modulesFolder = new File(baseFolder, "node_modules");
 	public CompiledScript commonjs;
 	public String[] ignorantFiles = {"jvm-npm.js", "pldr.js"};
+	public Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
+	public Map<String, String> scripts = new HashMap<>();
 	private static PldrJS instance = null;
 
 	public static PldrJS getInstance(){
 		return instance;
 	}
-	
+
 	public boolean exportResource(String resourceName, File target) throws Exception{
 		if(!target.exists()){
 			Files.copy(this.getClass().getClassLoader().getResourceAsStream(resourceName), target.toPath());
@@ -46,7 +50,7 @@ public class PldrJS extends PluginBase{
 		}
 		return false;
 	}
-
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onEnable(){
@@ -61,7 +65,7 @@ public class PldrJS extends PluginBase{
 			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
 			exportResource("pldr.js", new File(baseFolder, "pldr.js"));
 			exportResource("package.json", new File(baseFolder, "package.json"));
-			
+
 			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
 			ZipInputStream zis = new ZipInputStream(defaultModules);
 			ZipEntry entry;
@@ -76,14 +80,60 @@ public class PldrJS extends PluginBase{
 				zis.closeEntry();
 			}
 		}catch(Exception e){
-			e.printStackTrace();
+			this.getLogger().error("Error while exporting resources", e);
 			return;
 		}
 
 		try{
 			commonjs = ((Compilable) engine).compile(new FileReader(new File(baseFolder, "jvm-npm.js")));
 		}catch(Exception e){
-			e.printStackTrace();
+			this.getLogger().error("Error while compiling jvm-npm script", e);
+		}
+		
+		try{
+			List<String> files = new LinkedList<>();
+
+			URL resources = Server.class.getClassLoader().getResources("cn/nukkit/event/").nextElement();
+			if(!resources.toString().startsWith("jar")){
+				// not packaged with jar
+				for(File dir : new File(resources.getFile()).listFiles()){
+					if(!dir.isDirectory()) return;
+
+					for(File v : dir.listFiles(new FileFilter(){
+						@Override
+						public boolean accept(File f){
+							return f.isFile();
+						}
+					})){
+						files.add("cn/nukkit/event/" + dir.getName() + "/" + v.getName());
+					}
+				}
+			}else{
+				Enumeration<JarEntry> iter = ((JarURLConnection) resources.openConnection()).getJarFile().entries();
+				while(iter.hasMoreElements()){
+					files.add(iter.nextElement().getName());
+				}
+			}
+
+			files.forEach(file -> {
+				if(file.endsWith(".class") && file.startsWith("cn/nukkit/event")){
+					String[] split = file.split("/");
+					if(split.length != 5) return;
+					if(!split[2].equals("event")) return;
+					String category = split[3];
+					String className = split[4].substring(0, split[4].length() - 6);
+
+					if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
+
+					try {
+						knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
+					} catch (Exception e) {
+						this.getLogger().error("Error while iterating events", e);
+					}
+				}
+			});
+		}catch(Exception e){
+			this.getLogger().error("Error while finding events", e);
 		}
 
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
@@ -92,65 +142,37 @@ public class PldrJS extends PluginBase{
 					|| Arrays.asList(ignorantFiles).contains(f.getName())){
 					return;
 				}
-
-				ScriptContext ctx = new SimpleScriptContext();
-				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
 				
-				{
-					List<String> files = new LinkedList<>();
-					
-					URL resources = Server.class.getClassLoader().getResources("cn/nukkit/event/").nextElement();
-					if(!resources.toString().startsWith("jar")){
-						// not packaged with jar
-						for(File dir : new File(resources.getFile()).listFiles()){
-							if(!dir.isDirectory()) return;
-							
-							for(File v : dir.listFiles(new FileFilter(){
-								@Override
-								public boolean accept(File f){
-									return f.isFile();
-								}
-							})){
-								files.add("cn/nukkit/event/" + dir.getName() + "/" + v.getName());
-							}
-						}
-					}else{
-						Enumeration<JarEntry> iter = ((JarURLConnection) resources.openConnection()).getJarFile().entries();
-						while(iter.hasMoreElements()){
-							files.add(iter.nextElement().getName());
-						}
-					}
-					
-					Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
-					files.forEach(file -> {
-						if(file.endsWith(".class") && file.startsWith("cn/nukkit/event")){
-							String[] split = file.split("/");
-							if(split.length != 5) return;
-							if(!split[2].equals("event")) return;
-							String category = split[3];
-							String className = split[4].substring(0, split[4].length() - 6);
-							
-							if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
-							
-							try {
-								knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-					});
-					// TODO: utilize knownEvents
-				}
-
-				CompiledScript sc = ((Compilable) engine).compile(new FileReader(f));
-				commonjs.eval(ctx);
-				//ECMAScript6 not working!
-				//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
-				engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
-				sc.eval(ctx);
+				String[] split = f.getName().split("\\.");
+				String name = IntStream.range(0, split.length).filter((v) -> {
+					return v != split.length - 1;
+				}).mapToObj((v) -> {
+					return split[v];
+				}).collect(Collectors.joining("."));
+				
+				scripts.put(name, Files.lines(f.toPath()).collect(Collectors.joining("\n")));
 			}catch(Exception e){
-				e.printStackTrace();
+				this.getLogger().error("Error while reading scripts", e);
 			}
 		});
+
+		try{
+			ScriptContext ctx = new SimpleScriptContext();
+			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
+			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSEvents", knownEvents);
+			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSScripts", scripts);
+			commonjs.eval(ctx);
+			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
+			engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
+			scripts.forEach((k, v) -> {
+				try{
+					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);
+				}catch(Exception e){
+					this.getLogger().error("Error on script : " + k, e);
+				}
+			});
+		}catch(Exception e){
+			this.getLogger().error("Error while evaluating scripts", e);
+		}
 	}
 }

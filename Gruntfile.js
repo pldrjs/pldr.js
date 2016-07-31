@@ -13,13 +13,24 @@ module.exports = function(grunt) {
 				' */\n',
 
 		clean: {
-			dist: 'dist'
+			js: {
+				dist: 'dist'
+			},
+
+			test: {
+				dist: '../../scripts/pldr.js'
+			}
 		},
 
 		watch: {
 			js: {
 				files: ["js/*.js"],
 				tasks: ['dist-js']
+			},
+
+			test: {
+				files: ['js/*.js'],
+				tasks: ['test-js']
 			}
 		},
 
@@ -59,11 +70,20 @@ module.exports = function(grunt) {
 				src: 'dist/pldr.js',
 				dest: 'src/main/resources/pldr.js'
 			}
+		},
+
+		copy: {
+			nukkit: {
+				src: 'dist/pldr.js',
+				dest: '../../scripts/pldr.js'
+			}
 		}
 	});
 
 	grunt.registerTask('dist-js', ['babel', 'concat', 'uglify']);
-	grunt.registerTask('dist', ['clean', 'dist-js']);
+	grunt.registerTask('dist', ['clean:js', 'dist-js']);
 	grunt.registerTask('default', ['dist']);
 	grunt.registerTask('watch-js', ['watch:js']);
+	grunt.registerTask('test-js', ['clean:test', 'dist-js', 'copy:nukkit']);
+	grunt.registerTask('test', ['watch:test']);
 };

@@ -1,14 +1,6 @@
 var PldrJS = {};
 var $ = new JavaImporter(java.io, java.lang, Packages.cn.nukkit);
 
-PldrJS.getPlugin = function(){
-	return PldrJSPlugin;
-};
-
-PldrJS.print = function(str){
-	PldrJS.getPlugin().getLogger().info(str);
-};
-
 var knownEvents = {};
 var files = [];
 var capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -36,9 +28,12 @@ if(!resources.toString().startsWith("jar")){
 files.forEach((f) => {
 	if(f.endsWith(".class")){
 		var cp = removeClass(f.replace(/\//g, "."));
+		if(cp.indexOf('$') !== -1) return;
+
 		var split = f.split("/");
 		if(split.length !== 5) return;
 		if(split[2] !== 'event') return;
+
 		var category = split[3];
 		var className = removeClass(split[4]);
 		var eventName = camelize(className.replace("Event", ""));
@@ -49,6 +44,12 @@ files.forEach((f) => {
 	}
 });
 
-PldrJS.print(JSON.stringify(knownEvents));
+PldrJS.getPlugin = function(){
+	return PldrJSPlugin;
+};
+
+PldrJS.print = function(str){
+	PldrJS.getPlugin().getLogger().info(str);
+};
 
 module.exports = PldrJS;

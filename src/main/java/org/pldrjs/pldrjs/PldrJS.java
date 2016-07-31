@@ -1,12 +1,23 @@
 package org.pldrjs.pldrjs;
 
+import cn.nukkit.Server;
+import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileFilter;
 import java.io.InputStream;
+import java.net.JarURLConnection;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.jar.JarEntry;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -36,6 +47,7 @@ public class PldrJS extends PluginBase{
 		return false;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void onEnable(){
 		instance = this;
@@ -83,6 +95,52 @@ public class PldrJS extends PluginBase{
 
 				ScriptContext ctx = new SimpleScriptContext();
 				ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
+				
+				{
+					List<String> files = new LinkedList<>();
+					
+					URL resources = Server.class.getClassLoader().getResources("cn/nukkit/event/").nextElement();
+					if(!resources.toString().startsWith("jar")){
+						// not packaged with jar
+						for(File dir : new File(resources.getFile()).listFiles()){
+							if(!dir.isDirectory()) return;
+							
+							for(File v : dir.listFiles(new FileFilter(){
+								@Override
+								public boolean accept(File f){
+									return f.isFile();
+								}
+							})){
+								files.add("cn/nukkit/event/" + dir.getName() + "/" + v.getName());
+							}
+						}
+					}else{
+						Enumeration<JarEntry> iter = ((JarURLConnection) resources.openConnection()).getJarFile().entries();
+						while(iter.hasMoreElements()){
+							files.add(iter.nextElement().getName());
+						}
+					}
+					
+					Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
+					files.forEach(file -> {
+						if(file.endsWith(".class") && file.startsWith("cn/nukkit/event")){
+							String[] split = file.split("/");
+							if(split.length != 5) return;
+							if(!split[2].equals("event")) return;
+							String category = split[3];
+							String className = split[4].substring(0, split[4].length() - 6);
+							
+							if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
+							
+							try {
+								knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+						}
+					});
+					// TODO: utilize knownEvents
+				}
 
 				CompiledScript sc = ((Compilable) engine).compile(new FileReader(f));
 				commonjs.eval(ctx);

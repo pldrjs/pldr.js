@@ -32,7 +32,7 @@
 
   <build>
 	<finalName>${project.artifactId}-${project.version}</finalName>
-	<defaultGoal>clean install</defaultGoal>
+	<defaultGoal>clean package</defaultGoal>
 	<plugins>
        <plugin>
            <groupId>org.apache.maven.plugins</groupId>

@@ -21,6 +21,14 @@ var propertySetter = (name) => {
 	};
 };
 
+PldrJS.disabled = (handler) => {
+
+};
+
+PldrJS.tick = (handler) => {
+
+};
+
 PldrJS.command = (handler) => {
 	commandHandlers.push(handler);
 };
@@ -42,6 +50,7 @@ PldrJS.print = (str) => {
 
 // ModPE-like Environment
 // Please refer to https://github.com/Connor4898/ModPE-Docs/wiki
+// and https://duggum.github.io/modpe-api/
 
 //======Block=======
 PldrJS.Block = {};
@@ -51,12 +60,17 @@ PldrJS.Entity = {};
 PldrJS.Entity.setX = PldrJS.Entity.getX = PldrJS.Entity.x = propertySetter('x');
 PldrJS.Entity.setY = PldrJS.Entity.getY = PldrJS.Entity.y = propertySetter('y');
 PldrJS.Entity.setZ = PldrJS.Entity.getZ = PldrJS.Entity.z = propertySetter('z');
-PldrJS.Entity.getLevel = (entity) => {
-	return entity.getLevel();
-};
+PldrJS.Entity.setVelX = PldrJS.Entity.getVelX = PldrJS.Entity.velX = propertySetter('motionX');
+PldrJS.Entity.setVelY = PldrJS.Entity.getVelY = PldrJS.Entity.velY = propertySetter('motionY');
+PldrJS.Entity.setVelZ = PldrJS.Entity.getVelZ = PldrJS.Entity.velZ = propertySetter('motionZ');
 
-PldrJS.Entity.setLevel = (entity, level) => {
-	return entity.setLevel(level);
+PldrJS.Entity.getLevel = PldrJS.Entity.setLevel = PldrJS.Entity.level = (entity, level) => {
+	if(level !== undefined){
+		entity.setLevel(level);
+		return;
+	}
+
+	return entity.getLevel();
 };
 
 //======Event=======
@@ -97,6 +111,10 @@ PldrJS.Event.on = (eventName, handler, priority) => {
 	pluginManager.registerEvent(event, new handleListener(), handlePriority, new handleExecutor(), PldrJS.getPlugin());
 };
 
+PldrJS.Event.preventDefault = (event) => {
+	event.setCancelled();
+};
+
 //=======Item=======
 PldrJS.Item = {};
 
@@ -126,8 +144,35 @@ PldrJS.Player.getPlayers = () => {
 
 };
 
+PldrJS.Player.addItemInventory = (id, count, damage) => {
+
+};
+
 //======Script======
 PldrJS.Script = {};
 PldrJS.Script.Event = PldrEvent;
+PldrJS.saveData = PldrJS.Script.saveData = (k, v) => {
+
+};
+
+PldrJS.loadData = PldrJS.Script.loadData = (k) => {
+
+};
+
+PldrJS.removeData = PldrJS.Script.removeData = (k) => {
+
+};
+
+PldrJS.Script.saveExternalData = (scriptName, k, v) => {
+
+};
+
+PldrJS.Script.loadExternalData = (scriptName, k) => {
+
+};
+
+PldrJS.Script.removeExternalData = (scriptName, k) => {
+
+};
 
 module.exports = PldrJS;

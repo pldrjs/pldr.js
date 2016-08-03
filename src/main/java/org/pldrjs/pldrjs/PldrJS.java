@@ -1,6 +1,8 @@
 package org.pldrjs.pldrjs;
 
 import cn.nukkit.Server;
+import cn.nukkit.command.Command;
+import cn.nukkit.command.CommandSender;
 import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
 
@@ -30,6 +32,8 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.SimpleScriptContext;
 
+import jdk.nashorn.api.scripting.JSObject;
+
 public class PldrJS extends PluginBase{
 	public File baseFolder = new File("scripts/");
 	public File modulesFolder = new File(baseFolder, "node_modules");
@@ -38,6 +42,18 @@ public class PldrJS extends PluginBase{
 	public Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
 	public Map<String, String> scripts = new HashMap<>();
 	private static PldrJS instance = null;
+	private ScriptEngine engine = null;
+	private ScriptContext ctx = null;
+	private Thread t = new Thread(() -> {
+		while(true){
+			try{
+				engine.eval("$$.tickHook();", ctx);
+				Thread.sleep(50);
+			}catch(Exception e){
+				e.printStackTrace();
+			}
+		}
+	});
 
 	public static PldrJS getInstance(){
 		return instance;
@@ -50,12 +66,33 @@ public class PldrJS extends PluginBase{
 		}
 		return false;
 	}
+
+	@Override
+	public void onDisable(){
+		try{
+			engine.eval("$$.disabledHook();", ctx);
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+	}
 	
+	@Override
+	public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
+		try{
+			JSObject object = (JSObject) ctx.getAttribute("$$", ScriptContext.ENGINE_SCOPE);
+			JSObject method = (JSObject) object.getMember("commandHook");
+			return (boolean) method.call(object, new Object[] {sender, command, label, args});
+		}catch(Exception e){
+			
+		}
+		return true;
+	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onEnable(){
 		instance = this;
-		ScriptEngine engine = new ScriptEngineManager().getEngineByName("nashorn");
+		engine = new ScriptEngineManager().getEngineByName("nashorn");
 
 		if(!baseFolder.exists()){
 			baseFolder.mkdir();
@@ -89,7 +126,7 @@ public class PldrJS extends PluginBase{
 		}catch(Exception e){
 			this.getLogger().error("Error while compiling jvm-npm script", e);
 		}
-		
+
 		try{
 			List<String> files = new LinkedList<>();
 
@@ -142,14 +179,14 @@ public class PldrJS extends PluginBase{
 					|| Arrays.asList(ignorantFiles).contains(f.getName())){
 					return;
 				}
-				
+
 				String[] split = f.getName().split("\\.");
 				String name = IntStream.range(0, split.length).filter((v) -> {
 					return v != split.length - 1;
 				}).mapToObj((v) -> {
 					return split[v];
 				}).collect(Collectors.joining("."));
-				
+
 				scripts.put(name, Files.lines(f.toPath()).collect(Collectors.joining("\n")));
 			}catch(Exception e){
 				this.getLogger().error("Error while reading scripts", e);
@@ -157,13 +194,14 @@ public class PldrJS extends PluginBase{
 		});
 
 		try{
-			ScriptContext ctx = new SimpleScriptContext();
+			ctx = new SimpleScriptContext();
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSEvents", knownEvents);
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSScripts", scripts);
 			commonjs.eval(ctx);
 			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
 			engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
+			engine.eval("var $$ = require('./pldr');", ctx);
 			scripts.forEach((k, v) -> {
 				try{
 					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);
@@ -174,5 +212,7 @@ public class PldrJS extends PluginBase{
 		}catch(Exception e){
 			this.getLogger().error("Error while evaluating scripts", e);
 		}
+		
+		t.start();
 	}
 }

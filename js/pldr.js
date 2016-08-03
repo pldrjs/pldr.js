@@ -2,8 +2,6 @@ var $ = new JavaImporter(java.lang, Packages.cn.nukkit.plugin, Packages.cn.nukki
 var EventEmitter = require('events');
 var PldrJS = {};
 
-var commandHandlers = [];
-
 class PldrEventEmitter extends EventEmitter{
 
 }
@@ -21,32 +19,40 @@ var propertySetter = (name) => {
 	};
 };
 
-PldrJS.disabled = (handler) => {
-
+var eventHandlerSetter = (name) => {
+	return (handler) => {
+		PldrJS.Script.Event.on(name, handler);
+	}
 };
 
-PldrJS.tick = (handler) => {
-
+var eventHookSetter = (name) => {
+	return (...args) => {
+		PldrJS.Script.Event.emit(name, ...args);
+	};
 };
 
-PldrJS.command = (handler) => {
-	commandHandlers.push(handler);
-};
+PldrJS.disabled = eventHandlerSetter('disabled');
+PldrJS.tick = eventHandlerSetter('tick');
+PldrJS.command = eventHandlerSetter('command');
 
-PldrJS.commandHook = (sender, command, label, args) => {
-	//TODO
-	commandHandlers.forEach((v) => {
-		v(sender, command, label, args);
-	});
-};
+//TODO
+PldrJS.disabledHook = eventHookSetter('disabled');
+PldrJS.tickHook = eventHookSetter('tick');
+PldrJS.commandHook = eventHookSetter('command');
 
 PldrJS.getPlugin = () => {
 	return PldrJSPlugin;
 };
 
+PldrJS.getPluginManager = () => {
+	return PldrJS.getPlugin().getServer().getPluginManager();
+};
+
 PldrJS.print = (str) => {
 	PldrJS.getPlugin().getLogger().info(str);
 };
+
+PldrJS.console = PldrJS.getPlugin().getLogger();
 
 // ModPE-like Environment
 // Please refer to https://github.com/Connor4898/ModPE-Docs/wiki
@@ -77,11 +83,11 @@ PldrJS.Entity.getLevel = PldrJS.Entity.setLevel = PldrJS.Entity.level = (entity,
 PldrJS.Event = {};
 
 PldrJS.Event.emit = (event) => {
-	//TODO
+	PldrJS.getPluginManager().callEvent(event);
 };
 
 PldrJS.Event.getEvent = (eventName) => {
-
+	return Java.type(PldrJS.getKnownEvents().get(eventName).getCanonicalName());
 };
 
 PldrJS.Event.getKnownEvents = () => {
@@ -107,7 +113,7 @@ PldrJS.Event.on = (eventName, handler, priority) => {
 		PldrJS.getKnownEvents().get(eventName) :
 		$.Class.forName(eventName);
 
-	var pluginManager = PldrJS.getPlugin().getServer().getPluginManager();
+	var pluginManager = PldrJS.getPluginManager();
 	pluginManager.registerEvent(event, new handleListener(), handlePriority, new handleExecutor(), PldrJS.getPlugin());
 };
 

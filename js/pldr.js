@@ -1,12 +1,18 @@
 var $ = new JavaImporter(
 	java.lang,
+	java.lang.reflect,
 	java.io,
 	java.util.stream,
 	java.nio.file,
 	Packages.cn.nukkit.plugin,
 	Packages.cn.nukkit.event,
-	Packages.cn.nukkit.item
+	Packages.cn.nukkit.item,
+	Packages.cn.nukkit.math,
+	Packages.cn.nukkit.block,
+	Packages.cn.nukkit.level,
+	Packages.cn.nukkit.level.particle
 );
+
 var EventEmitter = require('events');
 var PldrJS = {};
 
@@ -43,21 +49,6 @@ PldrJS.disabled = eventHandlerSetter('disabled');
 PldrJS.modTick = PldrJS.tick = eventHandlerSetter('tick');
 PldrJS.command = eventHandlerSetter('command');
 
-PldrJS.registerCommand = (name, desc, usage) => {
-	var field = PldrJS.getPluginManager().getClass().getDeclaredField("commandMap");
-	field.setAccessible(true);
-	var commands = field.get(PldrJS.getPluginManager());
-
-	var mCommand = Java.extend(Java.type('cn.nukkit.command.Command'), {
-		execute: (sender, label, args) => {
-			PldrJS.commandHook(name, sender, label, args);
-		}
-	});
-
-	commands.register("PldrJS", new mCommand(name, desc, usage));
-};
-
-//TODO
 PldrJS.disabledHook = eventHookSetter('disabled');
 PldrJS.tickHook = eventHookSetter('tick');
 PldrJS.commandHook = eventHookSetter('command');
@@ -79,6 +70,20 @@ PldrJS.print = (str) => {
 };
 
 PldrJS.console = PldrJS.getPlugin().getLogger();
+
+var field = PldrJS.getPluginManager().getClass().getDeclaredField("commandMap");
+field.setAccessible(true);
+PldrJS.commandList = field.get(PldrJS.getPluginManager());
+
+PldrJS.registerCommand = (name, desc, usage) => {
+	var ownCommand = Java.extend(Java.type('cn.nukkit.command.Command'), {
+		execute: (sender, label, args) => {
+			PldrJS.commandHook(name, sender, label, args);
+		}
+	});
+
+	PldrJS.commandList.register("PldrJS", new ownCommand(name, desc, usage));
+};
 
 // ModPE-like Environment
 // Please refer to https://github.com/Connor4898/ModPE-Docs/wiki
@@ -141,8 +146,8 @@ PldrJS.Event.on = (eventName, handler, priority) => {
 
 	var handlePriority = priority ? $.EventPriority[priority.toUpperCase()] : $.EventPriority.NORMAL;
 
-	var event = (PldrJS.getKnownEvents().containsKey(eventName)) ?
-		PldrJS.getKnownEvents().get(eventName) :
+	var event = (PldrJS.Event.getKnownEvents().containsKey(eventName)) ?
+		PldrJS.Event.getKnownEvents().get(eventName) :
 		$.Class.forName(eventName);
 
 	var pluginManager = PldrJS.getPluginManager();
@@ -155,26 +160,43 @@ PldrJS.Item = {};
 //======Level=======
 PldrJS.Level = {};
 
-PldrJS.Level.addParticle = (type, x, y, z, velX, velY, velZ, size) => {
-	
+PldrJS.Level.addParticle = (level, type, x, y, z, data) => {
+	var vector = new $.Vector3(x, y, z);
+	var genericParticle = (data !== undefined) ? new $.GenericParticle(vector, type, data) : new $.GenericParticle(vector, type);
+
+	level.addParticle(genericParticle);
 };
 
-PldrJS.Level.setTile = (x, y, z, id, damage) => {
-
+PldrJS.Level.addColoredParticle(level, type, x, y, z, r, g, b) => {
+	return PldrJS.Level.addParticle(level, PldrJS.ParticleType.dust, x, y, z, ((a & 0xff) << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)));
 };
 
-PldrJS.Level.getTile = (x, y, z) => {
-
+PldrJS.Level.setTile = (level, x, y, z, id, damage) => {
+	level.setBlock(new $.Vector3(x, y, z), new $.Block(id, damage));
 };
 
-PldrJS.Level.explode = (x, y, z, radius) => {
+PldrJS.Level.getTile = (level, x, y, z) => {
+	return level.getBlock(new $.Vector3(x, y, z));
+};
 
+PldrJS.Level.explode = (level, x, y, z, radius, destroyBlock) => {
+	var position = new $.Position(x, y, z, level);
+	var explosion = new $.Explosion(position, radius, null);
+
+	if(destroyBlock){
+		explosion.explodeA();
+	}
+
+	explosion.explodeB();
 };
 
 //======ParticleType======
 PldrJS.ParticleType = {};
-PldrJSParticles.forEach((k, v) => {
-	PldrJS.ParticeType[k] = v;
+
+$.Particle.getClass().getDeclaredFields().forEach((field) => {
+	if($.Modifier.isStatic(field.getModifiers()) && field.getName().startsWith("TYPE_")){
+		PldrJS.ParticleType[field.getName().replaceFirst("TYPE_", "").toLowerCase()] = field.get(null);
+	}
 });
 
 //======Player======
@@ -234,7 +256,9 @@ PldrJS.Script.dataFile = new $.File("scripts/data.json");
 if(!PldrJS.Script.dataFile.exists()){
 	PldrJS.Script.dataFile.createNewFile();
 }else{
-	PldrJS.Script.data = JSON.parse($.Files.lines(PldrJS.Script.dataFile.toPath()).collect($.Collectors.joining("\n")));
+	try{
+		PldrJS.Script.data = JSON.parse($.Files.lines(PldrJS.Script.dataFile.toPath()).collect($.Collectors.joining("\n")));
+	}catch(e){}
 }
 var isDataChanged = false;
 
@@ -261,14 +285,18 @@ PldrJS.removeData = PldrJS.Script.removeData = (scriptName, k) => {
 	isDataChanged = true;
 };
 
+var isStopRequested = false;
+
 PldrJS.disabled(() => {
+	isStopRequested = true;
 	PldrJS.Script.flush();
 });
 
-var repeatedFlusher = () => {
-	PldrJS.Script.flush();
-	setTimeout(repeatedFlusher, 10000);
-};
+new $.Thread(() => {
+	while(!isStopRequested){
+		PldrJS.Script.flush();
+		$.Thread.sleep(10000);
+	}
+}).start();
 
-repeatedFlusher();
 module.exports = PldrJS;

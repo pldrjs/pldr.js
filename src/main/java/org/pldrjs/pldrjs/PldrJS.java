@@ -4,7 +4,6 @@ import cn.nukkit.Server;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.event.Event;
-import cn.nukkit.level.particle.Particle;
 import cn.nukkit.plugin.PluginBase;
 
 import java.io.File;
@@ -41,7 +40,6 @@ public class PldrJS extends PluginBase{
 	public CompiledScript commonjs;
 	public String[] ignorantFiles = {"jvm-npm.js", "pldr.js"};
 	public Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
-	public Map<String, Class<? extends Particle>> knownParticles = new HashMap<>();
 	public Map<String, String> scripts = new HashMap<>();
 	private static PldrJS instance = null;
 	private ScriptEngine engine = null;
@@ -78,14 +76,14 @@ public class PldrJS extends PluginBase{
 		}
 	}
 
-	private List<String> findClass(String packageName){
+	private List<String> findClass(String parentPackage) throws Exception{
 		List<String> files = new LinkedList<>();
-		packageName = packageName.replace(".", "/");
+		String packageName = parentPackage.replace(".", "/");
 		URL resources = Server.class.getClassLoader().getResources(packageName).nextElement();
 		if(!resources.toString().startsWith("jar")){
 			// not packaged with jar
 			for(File dir : new File(resources.getFile()).listFiles()){
-				if(!dir.isDirectory()) return;
+				if(!dir.isDirectory()) continue;
 
 				for(File v : dir.listFiles(new FileFilter(){
 					@Override
@@ -103,10 +101,10 @@ public class PldrJS extends PluginBase{
 			}
 		}
 
-		return files.filter(file -> {
+		return files.stream().filter((file) -> {
 			if(file.contains("$")) return false;
 			return file.endsWith(".class") && file.startsWith(packageName);
-		});
+		}).collect(Collectors.toList());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -159,32 +157,13 @@ public class PldrJS extends PluginBase{
 				if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
 
 				try {
-					knownEvents.put(className.substring(0, className.length() - 6).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
+					knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
 				} catch (Exception e) {
 					this.getLogger().error("Error while iterating events", e);
 				}
 			});
 		}catch(Exception e){
 			this.getLogger().error("Error while finding events", e);
-		}
-
-		try{
-			findClass("cn.nukkit.level.particle").forEach(file -> {
-				if(file.equals("cn/nukkit/level/particle/Particle.class")) return;
-				String className = file.split("/")[4];
-				className = className.substring(0, className.length() - 6);
-
-				try {
-					knownParticles.put(
-						className.toLowerCase(),
-						(Class<? extends Particle>) Class.forName(file.substring(0, file.length() - 6).replace("/", "."))
-					);
-				} catch (Exception e) {
-					this.getLogger().error("Error while iterating particles", e);
-				}
-			});
-		}catch(Exception e){
-			this.getLogger().error("Error while finding particles", e);
 		}
 
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
@@ -211,12 +190,16 @@ public class PldrJS extends PluginBase{
 			ctx = new SimpleScriptContext();
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSEvents", knownEvents);
-			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSParticles", knownParticles);
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSScripts", scripts);
 			commonjs.eval(ctx);
 			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
 			engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
-			engine.eval("var $$ = require('./pldr');", ctx);
+			try{
+				engine.eval("var $$ = require('./pldr');", ctx);
+			}catch(Exception e){
+				this.getLogger().error("Error on pldr.js init : ", e);
+			}
+
 			scripts.forEach((k, v) -> {
 				try{
 					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);

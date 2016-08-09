@@ -2,6 +2,7 @@ var $ = new JavaImporter(
 	java.lang,
 	java.lang.reflect,
 	java.io,
+	java.util,
 	java.util.stream,
 	java.nio.file,
 	Packages.cn.nukkit.plugin,
@@ -94,9 +95,25 @@ PldrJS.Block = {};
 
 //======Entity======
 PldrJS.Entity = {};
-PldrJS.Entity.setX = PldrJS.Entity.getX = PldrJS.Entity.x = propertySetter('x');
-PldrJS.Entity.setY = PldrJS.Entity.getY = PldrJS.Entity.y = propertySetter('y');
-PldrJS.Entity.setZ = PldrJS.Entity.getZ = PldrJS.Entity.z = propertySetter('z');
+PldrJS.Entity.setX = PldrJS.Entity.getX = PldrJS.Entity.x = (entity, x) => {
+	if(x === undefined) return entity.x;
+	entity.teleport(new $.Vector3(x, entity.y, entity.z));
+};
+
+PldrJS.Entity.setY = PldrJS.Entity.getY = PldrJS.Entity.y = (entity, y) => {
+	if(y === undefined) return entity.y;
+	entity.teleport(new $.Vector3(entity.x, y, entity.z));
+};
+
+PldrJS.Entity.setZ = PldrJS.Entity.getZ = PldrJS.Entity.z = (entity, z) => {
+	if(z === undefined) return entity.z;
+	entity.teleport(new $.Vector3(entity.x, entity.y, z));
+};
+
+PldrJS.Entity.teleport = (entity, x, y, z) => {
+	entity.teleport(new $.Vector3(x, y, z));
+};
+
 PldrJS.Entity.setVelX = PldrJS.Entity.getVelX = PldrJS.Entity.velX = propertySetter('motionX');
 PldrJS.Entity.setVelY = PldrJS.Entity.getVelY = PldrJS.Entity.velY = propertySetter('motionY');
 PldrJS.Entity.setVelZ = PldrJS.Entity.getVelZ = PldrJS.Entity.velZ = propertySetter('motionZ');
@@ -167,8 +184,8 @@ PldrJS.Level.addParticle = (level, type, x, y, z, data) => {
 	level.addParticle(genericParticle);
 };
 
-PldrJS.Level.addColoredParticle(level, type, x, y, z, r, g, b) => {
-	return PldrJS.Level.addParticle(level, PldrJS.ParticleType.dust, x, y, z, ((a & 0xff) << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)));
+PldrJS.Level.addColoredParticle = (level, type, x, y, z, r, g, b) => {
+	return PldrJS.Level.addParticle(level, PldrJS.ParticleType.dust, x, y, z, (((a & 0xff) << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)));
 };
 
 PldrJS.Level.setTile = (level, x, y, z, id, damage) => {
@@ -193,7 +210,7 @@ PldrJS.Level.explode = (level, x, y, z, radius, destroyBlock) => {
 //======ParticleType======
 PldrJS.ParticleType = {};
 
-$.Particle.getClass().getDeclaredFields().forEach((field) => {
+$.Arrays.asList($.Particle.class.getDeclaredFields()).forEach((field) => {
 	if($.Modifier.isStatic(field.getModifiers()) && field.getName().startsWith("TYPE_")){
 		PldrJS.ParticleType[field.getName().replaceFirst("TYPE_", "").toLowerCase()] = field.get(null);
 	}
@@ -213,6 +230,11 @@ PldrJS.Player.getLevel = (player) => {
 PldrJS.Player.x = PldrJS.Player.setX = PldrJS.Player.getX = PldrJS.Entity.x;
 PldrJS.Player.y = PldrJS.Player.setY = PldrJS.Player.getY = PldrJS.Entity.y;
 PldrJS.Player.z = PldrJS.Player.setZ = PldrJS.Player.getZ = PldrJS.Entity.z;
+PldrJS.Player.setVelX = PldrJS.Player.getVelX = PldrJS.Player.velX = PldrJS.Entity.velX;
+PldrJS.Player.setVelY = PldrJS.Player.getVelY = PldrJS.Player.velY = PldrJS.Entity.velY;
+PldrJS.Player.setVelZ = PldrJS.Player.getVelZ = PldrJS.Player.velZ = PldrJS.Entity.velZ;
+
+PldrJS.Player.teleport = PldrJS.Entity.teleport;
 
 PldrJS.Player.pitch = PldrJS.Player.getPitch = PldrJS.Player.setPitch = PldrJS.Entity.pitch;
 PldrJS.Player.yaw = PldrJS.Player.getYaw = PldrJS.Player.setYaw = PldrJS.Entity.yaw;

@@ -44,8 +44,9 @@ public class PldrJS extends PluginBase{
 	private static PldrJS instance = null;
 	private ScriptEngine engine = null;
 	private ScriptContext ctx = null;
+	public boolean isStopRequested = false;
 	private Thread t = new Thread(() -> {
-		while(true){
+		while(!isStopRequested){
 			try{
 				engine.eval("$$.tickHook();", ctx);
 				Thread.sleep(50);
@@ -69,6 +70,7 @@ public class PldrJS extends PluginBase{
 
 	@Override
 	public void onDisable(){
+		isStopRequested = true;
 		try{
 			engine.eval("$$.disabledHook();", ctx);
 		}catch(Exception e){
@@ -116,6 +118,7 @@ public class PldrJS extends PluginBase{
 		if(!baseFolder.exists()){
 			baseFolder.mkdir();
 		}
+		boolean test = (System.getenv("PLDR_ENVIRONMENT") != null) && System.getenv("PLDR_ENVIRONMENT").toLowerCase().equals("development");
 
 		try{
 			exportResource("commonjs/src/main/javascript/jvm-npm.js", new File(baseFolder, "jvm-npm.js"));
@@ -169,7 +172,7 @@ public class PldrJS extends PluginBase{
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
 			try{
 				if(!(f.isFile() && f.getName().endsWith(".js"))
-					|| Arrays.asList(ignorantFiles).contains(f.getName())){
+					|| (!test && Arrays.asList(ignorantFiles).contains(f.getName()))){
 					return;
 				}
 
@@ -211,6 +214,8 @@ public class PldrJS extends PluginBase{
 			this.getLogger().error("Error while evaluating scripts", e);
 		}
 
-		t.start();
+		if(!test){
+			t.start();
+		}
 	}
 }

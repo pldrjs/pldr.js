@@ -4,6 +4,7 @@ import cn.nukkit.Server;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.event.Event;
+import cn.nukkit.level.particle.Particle;
 import cn.nukkit.plugin.PluginBase;
 
 import java.io.File;
@@ -40,6 +41,7 @@ public class PldrJS extends PluginBase{
 	public CompiledScript commonjs;
 	public String[] ignorantFiles = {"jvm-npm.js", "pldr.js"};
 	public Map<String, Class<? extends Event>> knownEvents = new HashMap<>();
+	public Map<String, Class<? extends Particle>> knownParticles = new HashMap<>();
 	public Map<String, String> scripts = new HashMap<>();
 	private static PldrJS instance = null;
 	private ScriptEngine engine = null;
@@ -74,6 +76,37 @@ public class PldrJS extends PluginBase{
 		}catch(Exception e){
 			e.printStackTrace();
 		}
+	}
+
+	private List<String> findClass(String packageName){
+		List<String> files = new LinkedList<>();
+		packageName = packageName.replace(".", "/");
+		URL resources = Server.class.getClassLoader().getResources(packageName).nextElement();
+		if(!resources.toString().startsWith("jar")){
+			// not packaged with jar
+			for(File dir : new File(resources.getFile()).listFiles()){
+				if(!dir.isDirectory()) return;
+
+				for(File v : dir.listFiles(new FileFilter(){
+					@Override
+					public boolean accept(File f){
+						return f.isFile();
+					}
+				})){
+					files.add(packageName + "/" + dir.getName() + "/" + v.getName());
+				}
+			}
+		}else{
+			Enumeration<JarEntry> iter = ((JarURLConnection) resources.openConnection()).getJarFile().entries();
+			while(iter.hasMoreElements()){
+				files.add(iter.nextElement().getName());
+			}
+		}
+
+		return files.filter(file -> {
+			if(file.contains("$")) return false;
+			return file.endsWith(".class") && file.startsWith(packageName);
+		});
 	}
 
 	@SuppressWarnings("unchecked")
@@ -116,49 +149,42 @@ public class PldrJS extends PluginBase{
 		}
 
 		try{
-			List<String> files = new LinkedList<>();
+			findClass("cn.nukkit.event").forEach(file -> {
+				String[] split = file.split("/");
+				if(split.length != 5) return;
+				if(!split[2].equals("event")) return;
+				String category = split[3];
+				String className = split[4].substring(0, split[4].length() - 6);
 
-			URL resources = Server.class.getClassLoader().getResources("cn/nukkit/event/").nextElement();
-			if(!resources.toString().startsWith("jar")){
-				// not packaged with jar
-				for(File dir : new File(resources.getFile()).listFiles()){
-					if(!dir.isDirectory()) return;
+				if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
 
-					for(File v : dir.listFiles(new FileFilter(){
-						@Override
-						public boolean accept(File f){
-							return f.isFile();
-						}
-					})){
-						files.add("cn/nukkit/event/" + dir.getName() + "/" + v.getName());
-					}
-				}
-			}else{
-				Enumeration<JarEntry> iter = ((JarURLConnection) resources.openConnection()).getJarFile().entries();
-				while(iter.hasMoreElements()){
-					files.add(iter.nextElement().getName());
-				}
-			}
-
-			files.forEach(file -> {
-				if(file.endsWith(".class") && file.startsWith("cn/nukkit/event")){
-					String[] split = file.split("/");
-					if(split.length != 5) return;
-					if(!split[2].equals("event")) return;
-					String category = split[3];
-					String className = split[4].substring(0, split[4].length() - 6);
-
-					if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
-
-					try {
-						knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
-					} catch (Exception e) {
-						this.getLogger().error("Error while iterating events", e);
-					}
+				try {
+					knownEvents.put(className.substring(0, className.length() - 6).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
+				} catch (Exception e) {
+					this.getLogger().error("Error while iterating events", e);
 				}
 			});
 		}catch(Exception e){
 			this.getLogger().error("Error while finding events", e);
+		}
+
+		try{
+			findClass("cn.nukkit.level.particle").forEach(file -> {
+				if(file.equals("cn/nukkit/level/particle/Particle.class")) return;
+				String className = file.split("/")[4];
+				className = className.substring(0, className.length() - 6);
+
+				try {
+					knownParticles.put(
+						className.toLowerCase(),
+						(Class<? extends Particle>) Class.forName(file.substring(0, file.length() - 6).replace("/", "."))
+					);
+				} catch (Exception e) {
+					this.getLogger().error("Error while iterating particles", e);
+				}
+			});
+		}catch(Exception e){
+			this.getLogger().error("Error while finding particles", e);
 		}
 
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
@@ -185,6 +211,7 @@ public class PldrJS extends PluginBase{
 			ctx = new SimpleScriptContext();
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSPlugin", PldrJS.getInstance());
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSEvents", knownEvents);
+			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSParticles", knownParticles);
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSScripts", scripts);
 			commonjs.eval(ctx);
 			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");

@@ -40,7 +40,7 @@ var eventHookSetter = (name) => {
 };
 
 PldrJS.disabled = eventHandlerSetter('disabled');
-PldrJS.tick = eventHandlerSetter('tick');
+PldrJS.modTick = PldrJS.tick = eventHandlerSetter('tick');
 PldrJS.command = eventHandlerSetter('command');
 
 PldrJS.registerCommand = (name, desc, usage) => {
@@ -95,6 +95,8 @@ PldrJS.Entity.setZ = PldrJS.Entity.getZ = PldrJS.Entity.z = propertySetter('z');
 PldrJS.Entity.setVelX = PldrJS.Entity.getVelX = PldrJS.Entity.velX = propertySetter('motionX');
 PldrJS.Entity.setVelY = PldrJS.Entity.getVelY = PldrJS.Entity.velY = propertySetter('motionY');
 PldrJS.Entity.setVelZ = PldrJS.Entity.getVelZ = PldrJS.Entity.velZ = propertySetter('motionZ');
+PldrJS.Entity.setPitch = PldrJS.Entity.getPitch = PldrJS.Entity.pitch = propertySetter('pitch');
+PldrJS.Entity.setYaw = PldrJS.Entity.getYaw = PldrJS.Entity.yaw = propertySetter('yaw');
 
 PldrJS.Entity.getLevel = PldrJS.Entity.setLevel = PldrJS.Entity.level = (entity, level) => {
 	if(level !== undefined){
@@ -153,6 +155,28 @@ PldrJS.Item = {};
 //======Level=======
 PldrJS.Level = {};
 
+PldrJS.Level.addParticle = (type, x, y, z, velX, velY, velZ, size) => {
+	
+};
+
+PldrJS.Level.setTile = (x, y, z, id, damage) => {
+
+};
+
+PldrJS.Level.getTile = (x, y, z) => {
+
+};
+
+PldrJS.Level.explode = (x, y, z, radius) => {
+
+};
+
+//======ParticleType======
+PldrJS.ParticleType = {};
+PldrJSParticles.forEach((k, v) => {
+	PldrJS.ParticeType[k] = v;
+});
+
 //======Player======
 PldrJS.Player = {};
 
@@ -164,13 +188,12 @@ PldrJS.Player.getLevel = (player) => {
 	return player.getLevel();
 };
 
-PldrJS.Player.getPitch = (player) => {
-	return player.pitch;
-};
+PldrJS.Player.x = PldrJS.Player.setX = PldrJS.Player.getX = PldrJS.Entity.x;
+PldrJS.Player.y = PldrJS.Player.setY = PldrJS.Player.getY = PldrJS.Entity.y;
+PldrJS.Player.z = PldrJS.Player.setZ = PldrJS.Player.getZ = PldrJS.Entity.z;
 
-PldrJS.Player.getYaw = (player) => {
-	return player.yaw;
-};
+PldrJS.Player.pitch = PldrJS.Player.getPitch = PldrJS.Player.setPitch = PldrJS.Entity.pitch;
+PldrJS.Player.yaw = PldrJS.Player.getYaw = PldrJS.Player.setYaw = PldrJS.Entity.yaw;
 
 PldrJS.Player.getPlayerEnt = (playerName) => {
 	return PldrJS.getServer().getPlayerExact(playerName);
@@ -190,6 +213,19 @@ PldrJS.Player.addItemInventory = (player, id, count, damage) => {
 	player.getInventory().addItem(new $.Item(id, count, damage));
 };
 
+PldrJS.Player.clientMessage = (player, message) => {
+	player.sendMessage(message);
+};
+
+PldrJS.Player.showTipMessage = (player, message) => {
+	player.sendTip(message);
+};
+
+PldrJS.Player.showPopupMessage = (player, message, subtitle) => {
+	subtitle = subtitle || "";
+
+	player.sendPopup(message, subtitle);
+};
 //======Script======
 PldrJS.Script = {};
 PldrJS.Script.Event = PldrEvent;

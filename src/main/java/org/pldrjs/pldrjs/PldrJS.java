@@ -75,18 +75,6 @@ public class PldrJS extends PluginBase{
 			e.printStackTrace();
 		}
 	}
-	
-	@Override
-	public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
-		try{
-			JSObject object = (JSObject) ctx.getAttribute("$$", ScriptContext.ENGINE_SCOPE);
-			JSObject method = (JSObject) object.getMember("commandHook");
-			return (boolean) method.call(object, new Object[] {sender, command, label, args});
-		}catch(Exception e){
-			
-		}
-		return true;
-	}
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -212,7 +200,7 @@ public class PldrJS extends PluginBase{
 		}catch(Exception e){
 			this.getLogger().error("Error while evaluating scripts", e);
 		}
-		
+
 		t.start();
 	}
 }

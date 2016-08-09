@@ -1,4 +1,12 @@
-var $ = new JavaImporter(java.lang, Packages.cn.nukkit.plugin, Packages.cn.nukkit.event);
+var $ = new JavaImporter(
+	java.lang,
+	java.io,
+	java.util.stream,
+	java.nio.file,
+	Packages.cn.nukkit.plugin,
+	Packages.cn.nukkit.event,
+	Packages.cn.nukkit.item
+);
 var EventEmitter = require('events');
 var PldrJS = {};
 
@@ -35,6 +43,20 @@ PldrJS.disabled = eventHandlerSetter('disabled');
 PldrJS.tick = eventHandlerSetter('tick');
 PldrJS.command = eventHandlerSetter('command');
 
+PldrJS.registerCommand = (name, desc, usage) => {
+	var field = PldrJS.getPluginManager().getClass().getDeclaredField("commandMap");
+	field.setAccessible(true);
+	var commands = field.get(PldrJS.getPluginManager());
+
+	var mCommand = Java.extend(Java.type('cn.nukkit.command.Command'), {
+		execute: (sender, label, args) => {
+			PldrJS.commandHook(name, sender, label, args);
+		}
+	});
+
+	commands.register("PldrJS", new mCommand(name, desc, usage));
+};
+
 //TODO
 PldrJS.disabledHook = eventHookSetter('disabled');
 PldrJS.tickHook = eventHookSetter('tick');
@@ -44,8 +66,12 @@ PldrJS.getPlugin = () => {
 	return PldrJSPlugin;
 };
 
+PldrJS.getServer = () => {
+	return PldrJS.getPlugin().getServer();
+};
+
 PldrJS.getPluginManager = () => {
-	return PldrJS.getPlugin().getServer().getPluginManager();
+	return PldrJS.getServer().getPluginManager();
 };
 
 PldrJS.print = (str) => {
@@ -99,7 +125,11 @@ PldrJS.Event.on = (eventName, handler, priority) => {
 	var handleExecutor = Java.extend(EventExecutor, {
 		execute: (listener, event) => {
 			//handle on executor, not on listener because nashorn does not support creating new method.
-			handler(event);
+			handler.apply({
+				preventDefault: function(){
+					event.setCancelled();
+				}
+			}, [event]);
 		}
 	});
 
@@ -117,10 +147,6 @@ PldrJS.Event.on = (eventName, handler, priority) => {
 	pluginManager.registerEvent(event, new handleListener(), handlePriority, new handleExecutor(), PldrJS.getPlugin());
 };
 
-PldrJS.Event.preventDefault = (event) => {
-	event.setCancelled();
-};
-
 //=======Item=======
 PldrJS.Item = {};
 
@@ -131,54 +157,82 @@ PldrJS.Level = {};
 PldrJS.Player = {};
 
 PldrJS.Player.getCarriedItem = (player) => {
-
+	return player.getInventory().getItemInHand();
 };
 
 PldrJS.Player.getLevel = (player) => {
-
+	return player.getLevel();
 };
 
 PldrJS.Player.getPitch = (player) => {
+	return player.pitch;
+};
 
+PldrJS.Player.getYaw = (player) => {
+	return player.yaw;
 };
 
 PldrJS.Player.getPlayerEnt = (playerName) => {
-
+	return PldrJS.getServer().getPlayerExact(playerName);
 };
 
 PldrJS.Player.getPlayers = () => {
+	var players = [];
+	//Java Collection -> JavaScript array
+	PldrJS.getServer().getOnlinePlayers().values().forEach((v) => {
+		players.push(v);
+	});
 
+	return players;
 };
 
-PldrJS.Player.addItemInventory = (id, count, damage) => {
-
+PldrJS.Player.addItemInventory = (player, id, count, damage) => {
+	player.getInventory().addItem(new $.Item(id, count, damage));
 };
 
 //======Script======
 PldrJS.Script = {};
 PldrJS.Script.Event = PldrEvent;
-PldrJS.saveData = PldrJS.Script.saveData = (k, v) => {
+PldrJS.Script.data = {};
+PldrJS.Script.dataFile = new $.File("scripts/data.json");
+if(!PldrJS.Script.dataFile.exists()){
+	PldrJS.Script.dataFile.createNewFile();
+}else{
+	PldrJS.Script.data = JSON.parse($.Files.lines(PldrJS.Script.dataFile.toPath()).collect($.Collectors.joining("\n")));
+}
+var isDataChanged = false;
 
+PldrJS.Script.flush = () => {
+	if(!isDataChanged) return;
+
+	var bw = new $.BufferedWriter($.OutputStreamWriter($.FileOutputStream(PldrJS.Script.dataFile)));
+	bw.write(JSON.stringify(PldrJS.Script.data));
+	bw.flush();
+	bw.close();
 };
 
-PldrJS.loadData = PldrJS.Script.loadData = (k) => {
-
+PldrJS.saveData = PldrJS.Script.saveData = (scriptName, k, v) => {
+	isDataChanged = true;
+	if(PldrJS.Script.data[scriptName] === undefined) PldrJS.Script.data[scriptName] = {};
+	PldrJS.Script.data[scriptName][k] = v;
 };
 
-PldrJS.removeData = PldrJS.Script.removeData = (k) => {
-
+PldrJS.loadData = PldrJS.Script.loadData = (scriptName, k) => {
+	return PldrJS.Script.data[scriptName][k];
 };
 
-PldrJS.Script.saveExternalData = (scriptName, k, v) => {
-
+PldrJS.removeData = PldrJS.Script.removeData = (scriptName, k) => {
+	isDataChanged = true;
 };
 
-PldrJS.Script.loadExternalData = (scriptName, k) => {
+PldrJS.disabled(() => {
+	PldrJS.Script.flush();
+});
 
+var repeatedFlusher = () => {
+	PldrJS.Script.flush();
+	setTimeout(repeatedFlusher, 10000);
 };
 
-PldrJS.Script.removeExternalData = (scriptName, k) => {
-
-};
-
+repeatedFlusher();
 module.exports = PldrJS;

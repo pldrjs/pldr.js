@@ -42,17 +42,23 @@ var eventHandlerSetter = (name) => {
 
 var eventHookSetter = (name) => {
 	return (...args) => {
-		PldrJS.Script.Event.emit(name, ...args);
+		return PldrJS.Script.Event.emit(name, ...args);
 	};
 };
 
 PldrJS.disabled = eventHandlerSetter('disabled');
 PldrJS.modTick = PldrJS.tick = eventHandlerSetter('tick');
-PldrJS.command = eventHandlerSetter('command');
+PldrJS.command = (name, handler) => {
+	PldrJS.Script.Event.on('command:' + name, handler);
+};
 
 PldrJS.disabledHook = eventHookSetter('disabled');
 PldrJS.tickHook = eventHookSetter('tick');
-PldrJS.commandHook = eventHookSetter('command');
+PldrJS.commandHook = (...args) => {
+	return PldrJS.Script.Event.listeners('command:' + args[0]).some((v) => {
+		return v(...args);
+	});
+};
 
 PldrJS.getPlugin = () => {
 	return PldrJSPlugin;
@@ -79,7 +85,7 @@ PldrJS.commandList = field.get(PldrJS.getPluginManager());
 PldrJS.registerCommand = (name, desc, usage) => {
 	var ownCommand = Java.extend(Java.type('cn.nukkit.command.Command'), {
 		execute: (sender, label, args) => {
-			PldrJS.commandHook(name, sender, label, args);
+			return PldrJS.commandHook(name, sender, label, args);
 		}
 	});
 
@@ -314,11 +320,13 @@ PldrJS.disabled(() => {
 	PldrJS.Script.flush();
 });
 
-new $.Thread(() => {
+var thread = new $.Thread(() => {
 	while(!isStopRequested){
 		PldrJS.Script.flush();
 		$.Thread.sleep(10000);
 	}
-}).start();
+});
+thread.setName("PldrJS Save Thread");
+thread.start();
 
 module.exports = PldrJS;

@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/pldrjs/pldr.js#readme",
   "dependencies": {
+    "babel-polyfill": "^6.13.0",
     "events": "^1.1.1"
   }
 }

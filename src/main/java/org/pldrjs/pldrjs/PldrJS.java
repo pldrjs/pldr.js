@@ -5,6 +5,7 @@ import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
 import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
+import cn.nukkit.utils.TextFormat;
 
 import java.io.File;
 import java.io.FileReader;
@@ -197,6 +198,7 @@ public class PldrJS extends PluginBase{
 			commonjs.eval(ctx);
 			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
 			engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
+			engine.eval("require('babel-polyfill');", ctx);
 			try{
 				engine.eval("var $$ = require('./pldr');", ctx);
 			}catch(Exception e){
@@ -206,6 +208,7 @@ public class PldrJS extends PluginBase{
 			scripts.forEach((k, v) -> {
 				try{
 					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);
+					this.getLogger().info(TextFormat.AQUA + "Script " + k + " was loaded successfully.");
 				}catch(Exception e){
 					this.getLogger().error("Error on script : " + k, e);
 				}
@@ -215,6 +218,7 @@ public class PldrJS extends PluginBase{
 		}
 
 		if(!test){
+			t.setName("PldrJS modTick Thread");
 			t.start();
 		}
 	}

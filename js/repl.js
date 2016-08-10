@@ -8,7 +8,6 @@ var _$ = new JavaImporter(
 	Packages.cn.nukkit.utils
 );
 
-var statementArea, resultArea;
 var thiz = this;
 
 var mApplication = Java.extend(Java.type("javafx.application.Application"), {
@@ -17,7 +16,7 @@ var mApplication = Java.extend(Java.type("javafx.application.Application"), {
 	}
 });
 
-new _$.Thread(function(){
+new _$.Thread(() => {
 	_$.Application.launch(mApplication.class);
 }).start();
 
@@ -27,17 +26,18 @@ PldrJS.command('repl', function(command, sender, label, args){
 		sender.sendMessage(_$.TextFormat.RED + 'Please run this command in console');
 		return;
 	}
+	var statementArea, resultArea;
 
 	_$.Platform.runLater(() => {
 		statementArea = new _$.TextArea();
 		statementArea.setPrefColumnCount(50);
 		statementArea.setPrefRowCount(30);
-		statementArea.setPromptText("Enter statement here.");
+		statementArea.setPromptText("Enter statement here...");
 
 		resultArea = new _$.TextArea();
 		resultArea.setPrefColumnCount(50);
 		resultArea.setPrefColumnCount(10);
-		resultArea.setDisable(true);
+		resultArea.setEditable(false);
 		resultArea.setStyle("-fx-opacity: 1.0;");
 
 		var evalButton = new _$.Button("Evaluate");

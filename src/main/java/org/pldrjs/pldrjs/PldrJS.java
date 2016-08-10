@@ -158,10 +158,12 @@ public class PldrJS extends PluginBase{
 				String category = split[3];
 				String className = split[4].substring(0, split[4].length() - 6);
 
-				if(file.equals("cn/nukkit/event/" + category + "/" + (category.charAt(0) - 32) + category.substring(1))) return;
+				if(file.equals("cn/nukkit/event/" + category + "/" + category.substring(0, 1).toUpperCase() + category.substring(1) + "Event.class")) return;
 
 				try {
-					knownEvents.put(className.substring(0, className.length() - 5).toLowerCase(), (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
+					String eventName = className.substring(0, className.length() - 5).toLowerCase();
+					if(knownEvents.containsKey(eventName)) return;
+					knownEvents.put(eventName, (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
 				} catch (Exception e) {
 					this.getLogger().error("Error while iterating events", e);
 				}
@@ -196,11 +198,12 @@ public class PldrJS extends PluginBase{
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSEvents", knownEvents);
 			ctx.getBindings(ScriptContext.ENGINE_SCOPE).put("PldrJSScripts", scripts);
 			commonjs.eval(ctx);
+			engine.eval(Files.lines((new File(baseFolder, "node_modules/babel-polyfill/dist/polyfill.min.js")).toPath()).collect(Collectors.joining("\n")), ctx);
 			//engine.eval("Require.root = `" + baseFolder.getAbsolutePath() + "`;");
 			engine.eval("require.root = \"" + baseFolder.getAbsolutePath().replace("\\", "\\\\") + "\";", ctx);
-			engine.eval("require('babel-polyfill');", ctx);
+			//require('babel-polyfill') not working
 			try{
-				engine.eval("var $$ = require('./pldr');", ctx);
+				engine.eval("var PldrJS = require('./pldr');\nvar $$ = PldrJS;", ctx);
 			}catch(Exception e){
 				this.getLogger().error("Error on pldr.js init : ", e);
 			}

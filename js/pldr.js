@@ -143,7 +143,7 @@ PldrJS.Event.emit = (event) => {
 };
 
 PldrJS.Event.getEvent = (eventName) => {
-	return Java.type(PldrJS.getKnownEvents().get(eventName).getCanonicalName());
+	return Java.type(PldrJS.Event.getKnownEvents().get(eventName).getCanonicalName());
 };
 
 PldrJS.Event.getKnownEvents = () => {
@@ -190,7 +190,7 @@ PldrJS.Level.addParticle = (level, type, x, y, z, data) => {
 	level.addParticle(genericParticle);
 };
 
-PldrJS.Level.addColoredParticle = (level, type, x, y, z, r, g, b) => {
+PldrJS.Level.addColoredParticle = (level, x, y, z, a, r, g, b) => {
 	return PldrJS.Level.addParticle(level, PldrJS.ParticleType.dust, x, y, z, (((a & 0xff) << 24) | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff)));
 };
 
@@ -213,6 +213,14 @@ PldrJS.Level.explode = (level, x, y, z, radius, destroyBlock) => {
 	explosion.explodeB();
 };
 
+PldrJS.Level.getLevel = (levelName) => {
+	return PldrJS.getServer().getLevelByName(levelName);
+};
+
+PldrJS.Level.getName(level) => {
+	return level.getFolderName();
+};
+
 //======ParticleType======
 PldrJS.ParticleType = {};
 
@@ -229,10 +237,6 @@ PldrJS.Player.getCarriedItem = (player) => {
 	return player.getInventory().getItemInHand();
 };
 
-PldrJS.Player.getLevel = (player) => {
-	return player.getLevel();
-};
-
 PldrJS.Player.x = PldrJS.Player.setX = PldrJS.Player.getX = PldrJS.Entity.x;
 PldrJS.Player.y = PldrJS.Player.setY = PldrJS.Player.getY = PldrJS.Entity.y;
 PldrJS.Player.z = PldrJS.Player.setZ = PldrJS.Player.getZ = PldrJS.Entity.z;
@@ -244,6 +248,8 @@ PldrJS.Player.teleport = PldrJS.Entity.teleport;
 
 PldrJS.Player.pitch = PldrJS.Player.getPitch = PldrJS.Player.setPitch = PldrJS.Entity.pitch;
 PldrJS.Player.yaw = PldrJS.Player.getYaw = PldrJS.Player.setYaw = PldrJS.Entity.yaw;
+
+PldrJS.Player.level = PldrJS.Player.getLevel = PldrJS.Player.setLevel = PldrJS.Entity.level;
 
 PldrJS.Player.getPlayerEnt = (playerName) => {
 	return PldrJS.getServer().getPlayerExact(playerName);
@@ -310,6 +316,7 @@ PldrJS.loadData = PldrJS.Script.loadData = (scriptName, k) => {
 };
 
 PldrJS.removeData = PldrJS.Script.removeData = (scriptName, k) => {
+	PldrJS.Script.data[scriptName][k] = undefined;
 	isDataChanged = true;
 };
 

@@ -217,7 +217,7 @@ PldrJS.Level.getLevel = (levelName) => {
 	return PldrJS.getServer().getLevelByName(levelName);
 };
 
-PldrJS.Level.getName(level) => {
+PldrJS.Level.getName = (level) => {
 	return level.getFolderName();
 };
 
@@ -299,10 +299,11 @@ var isDataChanged = false;
 PldrJS.Script.flush = () => {
 	if(!isDataChanged) return;
 
-	var bw = new $.BufferedWriter($.OutputStreamWriter($.FileOutputStream(PldrJS.Script.dataFile)));
+	var bw = new $.BufferedWriter(new $.OutputStreamWriter(new $.FileOutputStream(PldrJS.Script.dataFile)));
 	bw.write(JSON.stringify(PldrJS.Script.data));
 	bw.flush();
 	bw.close();
+	isDataChanged = false;
 };
 
 PldrJS.saveData = PldrJS.Script.saveData = (scriptName, k, v) => {

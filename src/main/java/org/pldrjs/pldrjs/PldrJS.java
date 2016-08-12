@@ -126,6 +126,8 @@ public class PldrJS extends PluginBase{
 			exportResource("pldr.js", new File(baseFolder, "pldr.js"));
 			exportResource("package.json", new File(baseFolder, "package.json"));
 
+			if(!modulesFolder.exists()) modulesFolder.mkdir();
+
 			InputStream defaultModules = this.getClass().getClassLoader().getResourceAsStream("default_modules.zip");
 			ZipInputStream zis = new ZipInputStream(defaultModules);
 			ZipEntry entry;

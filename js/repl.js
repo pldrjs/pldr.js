@@ -11,7 +11,7 @@ try{
 		javafx.application,
 		javafx.scene,
 		javafx.scene.control,
-		javafx.scene.layout,
+		javafx.scene.layout
 	);
 
 	var thiz = this;

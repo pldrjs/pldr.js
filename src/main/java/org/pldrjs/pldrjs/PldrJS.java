@@ -7,10 +7,15 @@ import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.TextFormat;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonParser;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileFilter;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -144,6 +149,38 @@ public class PldrJS extends PluginBase{
 		}catch(Exception e){
 			this.getLogger().error("Error while exporting resources", e);
 			return;
+		}
+
+		try{
+			this.getLogger().info(TextFormat.AQUA + "업데이트 체크중.... 시간이 오래 걸릴 수 있습니다.");
+			URL versionCheck = new URL("https://raw.githubusercontent.com/pldrjs/pldr.js/master/package.json");
+			String serverPackage = (new BufferedReader(new InputStreamReader(versionCheck.openStream()))).lines().collect(Collectors.joining("\n"));
+			Gson gson = new Gson();
+			JsonParser parser = new JsonParser();
+			String serverVersion = gson.fromJson(parser.parse(serverPackage).getAsJsonObject().get("version"), String.class);
+
+			String localPackage = Files.lines(new File(baseFolder, "package.json").toPath()).collect(Collectors.joining("\n"));
+			String localVersion = gson.fromJson(parser.parse(localPackage).getAsJsonObject().get("version"), String.class);
+
+			if(!localVersion.equals(serverVersion)){
+				this.getLogger().warning("업데이트가 발견되었습니다!");
+			}
+
+			String packagedPackage = (new BufferedReader(new InputStreamReader(this.getClass().getClassLoader().getResourceAsStream("package.json")))).lines().collect(Collectors.joining("\n"));
+			String packagedVersion = gson.fromJson(parser.parse(packagedPackage).getAsJsonObject().get("version"), String.class);
+
+			if(!localVersion.equals(packagedVersion)){
+				this.getLogger().info(TextFormat.AQUA + "pldr.js는 업데이트 되었습니다.");
+				new File(baseFolder, "jvm-npm.js").delete();
+				new File(baseFolder, "pldr.js").delete();
+				new File(baseFolder, "package.json").delete();
+				modulesFolder.delete();
+				this.getLogger().info(TextFormat.AQUA + "pldr.js의 업데이트를 끝마치기 위해 서버를 종료합니다. 다시 시작하여주세요.");
+				this.getServer().shutdown();
+				return;
+			}
+		}catch(Exception e){
+			this.getLogger().warning("업데이트 체크 중 오류가 발생했습니다!");
 		}
 
 		try{

@@ -1,24 +1,38 @@
 var _$ = new JavaImporter(
 	java.lang,
-	javafx.application,
-	javafx.scene,
-	javafx.scene.control,
-	javafx.scene.layout,
 	Packages.cn.nukkit.command,
 	Packages.cn.nukkit.utils
 );
 
-var thiz = this;
+var __$;
 
-var mApplication = Java.extend(Java.type("javafx.application.Application"), {
-	start: function(stg){
-		PldrJS.Stage = stg;
-	}
-});
+try{
+	__$ = new JavaImporter(
+		javafx.application,
+		javafx.scene,
+		javafx.scene.control,
+		javafx.scene.layout,
+	);
 
-new _$.Thread(() => {
-	_$.Application.launch(mApplication.class);
-}).start();
+	var thiz = this;
+
+	var mApplication = Java.extend(Java.type("javafx.application.Application"), {
+		start: function(stg){
+			PldrJS.GUIEnabled = true;
+			PldrJS.Stage = stg;
+		}
+	});
+
+	new _$.Thread(() => {
+		try{
+			__$.Application.launch(mApplication.class);
+		}catch(e){
+			PldrJS.GUIEnabled = false;
+		}
+	}).start();
+}catch(e){
+	PldrJS.GUIEnabled = false;
+}
 
 PldrJS.registerCommand('repl', 'Starts REPL Mode.', '/repl');
 PldrJS.command('repl', function(command, sender, label, args){
@@ -26,50 +40,56 @@ PldrJS.command('repl', function(command, sender, label, args){
 		sender.sendMessage(_$.TextFormat.RED + 'Please run this command in console');
 		return;
 	}
+
+	if(!PldrJS.GUIEnabled){
+		sender.sendMessage(_$.TextFormat.RED + 'You cannot use gui!');
+		return;
+	}
+
 	var statementArea, resultArea;
 
-	_$.Platform.runLater(() => {
-		statementArea = new _$.TextArea();
+	__$.Platform.runLater(() => {
+		statementArea = new __$.TextArea();
 		statementArea.setPrefColumnCount(50);
 		statementArea.setPrefRowCount(30);
 		statementArea.setPromptText("Enter statement here...");
 
-		resultArea = new _$.TextArea();
+		resultArea = new __$.TextArea();
 		resultArea.setPrefColumnCount(50);
 		resultArea.setPrefColumnCount(10);
 		resultArea.setEditable(false);
 		resultArea.setStyle("-fx-opacity: 1.0;");
 
-		var evalButton = new _$.Button("Evaluate");
+		var evalButton = new __$.Button("Evaluate");
 		evalButton.setMaxWidth(_$.Double.MAX_VALUE);
 		evalButton.setOnAction(() => {
 			new _$.Thread(() => {
 				var startTime = Date.now();
 				var value = (new Function(statementArea.getText())).apply(thiz, []);
 				var elapsedTime = Date.now() - startTime;
-				_$.Platform.runLater(() => {
+				__$.Platform.runLater(() => {
 					resultArea.setText(value + "\nElapsed Time : " + elapsedTime + "ms");
 				});
 			}).start();
 		});
 
-		var cc = new _$.ColumnConstraints();
+		var cc = new __$.ColumnConstraints();
 		cc.setFillWidth(true);
-		cc.setHgrow(_$.Priority.ALWAYS);
+		cc.setHgrow(__$.Priority.ALWAYS);
 
-		var rc = new _$.RowConstraints();
+		var rc = new __$.RowConstraints();
 		rc.setFillHeight(true);
-		rc.setVgrow(_$.Priority.ALWAYS);
+		rc.setVgrow(__$.Priority.ALWAYS);
 
-		var rootPane = new _$.GridPane();
+		var rootPane = new __$.GridPane();
 		rootPane.getColumnConstraints().add(cc);
 		rootPane.getRowConstraints().add(rc);
-		rootPane.add(new _$.Label("Statement"), 0, 0);
+		rootPane.add(new __$.Label("Statement"), 0, 0);
 		rootPane.add(statementArea, 0, 1);
 		rootPane.add(evalButton, 0, 2);
 		rootPane.add(resultArea, 0, 3);
 
-		var scene = new _$.Scene(rootPane);
+		var scene = new __$.Scene(rootPane);
 		PldrJS.Stage.setScene(scene);
 		PldrJS.Stage.setTitle("REPL");
 		PldrJS.Stage.show();

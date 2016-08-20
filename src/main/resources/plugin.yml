@@ -1,6 +1,6 @@
 name: "pldr.js"
 author: "pldrjs"
-version: "erita [1.0]"
+version: "ortex [1.2]"
 description: "A plugin which enables javascript plugin in nukkit."
 main: org.pldrjs.pldrjs.PldrJS
 api: [1.0.0]

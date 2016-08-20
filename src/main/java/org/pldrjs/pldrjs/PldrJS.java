@@ -1,8 +1,6 @@
 package org.pldrjs.pldrjs;
 
 import cn.nukkit.Server;
-import cn.nukkit.command.Command;
-import cn.nukkit.command.CommandSender;
 import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.TextFormat;
@@ -38,8 +36,6 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.SimpleScriptContext;
 
-import jdk.nashorn.api.scripting.JSObject;
-
 public class PldrJS extends PluginBase{
 	public File baseFolder = new File("scripts/");
 	public File modulesFolder = new File(baseFolder, "node_modules");
@@ -51,6 +47,7 @@ public class PldrJS extends PluginBase{
 	private ScriptEngine engine = null;
 	private ScriptContext ctx = null;
 	public boolean isStopRequested = false;
+	private boolean updateRequired = false;
 	private Thread t = new Thread(() -> {
 		while(!isStopRequested){
 			try{
@@ -77,11 +74,32 @@ public class PldrJS extends PluginBase{
 	@Override
 	public void onDisable(){
 		isStopRequested = true;
+		if(updateRequired){
+			new File(baseFolder, "jvm-npm.js").delete();
+			new File(baseFolder, "pldr.js").delete();
+			new File(baseFolder, "package.json").delete();
+			deleteFolder(modulesFolder);
+			return;
+		}
+
 		try{
 			engine.eval("$$.disabledHook();", ctx);
 		}catch(Exception e){
 			e.printStackTrace();
 		}
+	}
+
+	public void deleteFolder(File f){
+		File[] innerFiles = f.listFiles();
+
+		if(innerFiles.length <= 0) return;
+
+		Arrays.asList(innerFiles).forEach((v) -> {
+			if(v.isDirectory()) deleteFolder(v);
+			else v.delete();
+		});
+
+		f.delete();
 	}
 
 	private List<String> findClass(String parentPackage) throws Exception{
@@ -147,7 +165,7 @@ public class PldrJS extends PluginBase{
 				zis.closeEntry();
 			}
 		}catch(Exception e){
-			this.getLogger().error("Error while exporting resources", e);
+			this.getLogger().error("리소스 추출 중에 오류가 발생했습니다.", e);
 			return;
 		}
 
@@ -171,22 +189,19 @@ public class PldrJS extends PluginBase{
 
 			if(!localVersion.equals(packagedVersion)){
 				this.getLogger().info(TextFormat.AQUA + "pldr.js는 업데이트 되었습니다.");
-				new File(baseFolder, "jvm-npm.js").delete();
-				new File(baseFolder, "pldr.js").delete();
-				new File(baseFolder, "package.json").delete();
-				modulesFolder.delete();
+				updateRequired = true;
 				this.getLogger().info(TextFormat.AQUA + "pldr.js의 업데이트를 끝마치기 위해 서버를 종료합니다. 다시 시작하여주세요.");
 				this.getServer().shutdown();
 				return;
 			}
 		}catch(Exception e){
-			this.getLogger().warning("업데이트 체크 중 오류가 발생했습니다!");
+			this.getLogger().warning("업데이트 체크 중 오류가 발생했습니다.");
 		}
 
 		try{
 			commonjs = ((Compilable) engine).compile(new FileReader(new File(baseFolder, "jvm-npm.js")));
 		}catch(Exception e){
-			this.getLogger().error("Error while compiling jvm-npm script", e);
+			this.getLogger().error("jvm-npm 스크립트를 컴파일 하던 도중 오류가 발생했습니다.", e);
 		}
 
 		try{
@@ -204,11 +219,11 @@ public class PldrJS extends PluginBase{
 					if(knownEvents.containsKey(eventName)) return;
 					knownEvents.put(eventName, (Class<? extends Event>) Class.forName(file.substring(0, file.length() - 6).replace("/", ".")));
 				} catch (Exception e) {
-					this.getLogger().error("Error while iterating events", e);
+					this.getLogger().error("이벤트 목록을 순환 중에 오류가 발생했습니다.", e);
 				}
 			});
 		}catch(Exception e){
-			this.getLogger().error("Error while finding events", e);
+			this.getLogger().error("이벤트를 찾는 도중 오류가 발생했습니다.", e);
 		}
 
 		Arrays.asList(baseFolder.listFiles()).forEach((f) -> {
@@ -227,7 +242,7 @@ public class PldrJS extends PluginBase{
 
 				scripts.put(name, Files.lines(f.toPath()).collect(Collectors.joining("\n")));
 			}catch(Exception e){
-				this.getLogger().error("Error while reading scripts", e);
+				this.getLogger().error("스크립트를 읽는 도중 오류가 발생했습니다.", e);
 			}
 		});
 
@@ -244,19 +259,19 @@ public class PldrJS extends PluginBase{
 			try{
 				engine.eval("var PldrJS = require('./pldr');\nvar $$ = PldrJS;", ctx);
 			}catch(Exception e){
-				this.getLogger().error("Error on pldr.js init : ", e);
+				this.getLogger().error("pldr.js 스크립트 시작 도중 오류가 발생했습니다.", e);
 			}
 
 			scripts.forEach((k, v) -> {
 				try{
 					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);
-					this.getLogger().info(TextFormat.AQUA + "Script " + k + " was loaded successfully.");
+					this.getLogger().info(TextFormat.AQUA + k + "스크립트가 성공적으로 로딩됐습니다.");
 				}catch(Exception e){
-					this.getLogger().error("Error on script : " + k, e);
+					this.getLogger().error(k + " 스크립트에 오류가 있습니다.", e);
 				}
 			});
 		}catch(Exception e){
-			this.getLogger().error("Error while evaluating scripts", e);
+			this.getLogger().error("스크립트들을 실행시키는 도중에 오류가 발생했습니다.", e);
 		}
 
 		if(!test){

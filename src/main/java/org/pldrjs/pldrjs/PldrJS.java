@@ -3,7 +3,6 @@ package org.pldrjs.pldrjs;
 import cn.nukkit.Server;
 import cn.nukkit.event.Event;
 import cn.nukkit.plugin.PluginBase;
-import cn.nukkit.utils.TextFormat;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
@@ -170,7 +169,7 @@ public class PldrJS extends PluginBase{
 		}
 
 		try{
-			this.getLogger().info(TextFormat.AQUA + "업데이트 체크중.... 시간이 오래 걸릴 수 있습니다.");
+			this.getLogger().info("\u00a7b" + "업데이트 체크중.... 시간이 오래 걸릴 수 있습니다.");
 			URL versionCheck = new URL("https://raw.githubusercontent.com/pldrjs/pldr.js/master/package.json");
 			String serverPackage = (new BufferedReader(new InputStreamReader(versionCheck.openStream()))).lines().collect(Collectors.joining("\n"));
 			Gson gson = new Gson();
@@ -188,9 +187,9 @@ public class PldrJS extends PluginBase{
 			String packagedVersion = gson.fromJson(parser.parse(packagedPackage).getAsJsonObject().get("version"), String.class);
 
 			if(!localVersion.equals(packagedVersion)){
-				this.getLogger().info(TextFormat.AQUA + "pldr.js는 업데이트 되었습니다.");
+				this.getLogger().info("\u00a7b" + "pldr.js는 업데이트 되었습니다.");
 				updateRequired = true;
-				this.getLogger().info(TextFormat.AQUA + "pldr.js의 업데이트를 끝마치기 위해 서버를 종료합니다. 다시 시작하여주세요.");
+				this.getLogger().info("\u00a7b" + "pldr.js의 업데이트를 끝마치기 위해 서버를 종료합니다. 다시 시작하여주세요.");
 				this.getServer().shutdown();
 				return;
 			}
@@ -265,7 +264,7 @@ public class PldrJS extends PluginBase{
 			scripts.forEach((k, v) -> {
 				try{
 					engine.eval("Function(PldrJSScripts.get('" + k.replace("'", "\\'") + "'))()", ctx);
-					this.getLogger().info(TextFormat.AQUA + k + "스크립트가 성공적으로 로딩됐습니다.");
+					this.getLogger().info("\u00a7b" + k + "스크립트가 성공적으로 로딩됐습니다.");
 				}catch(Exception e){
 					this.getLogger().error(k + " 스크립트에 오류가 있습니다.", e);
 				}
